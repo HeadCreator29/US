@@ -1,0 +1,141 @@
+.language-gate {
+  position: fixed;
+  inset: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #0a0a0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  overflow: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.grain-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  animation: grainShift 8s infinite;
+}
+
+@keyframes grainShift {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-1%, 1%); }
+  50% { transform: translate(1%, -1%); }
+  75% { transform: translate(-1%, -1%); }
+}
+
+.gate-content {
+  text-align: center;
+  z-index: 1;
+  padding: 1.5rem;
+  max-width: 520px;
+  opacity: 0;
+  animation: gateReveal 1s ease-out 0.2s forwards;
+}
+
+@keyframes gateReveal {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gate-kicker {
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #4a4540;
+  margin: 0 0 1.5rem;
+}
+
+.gate-title {
+  font-size: clamp(1.5rem, 6vw, 2.5rem);
+  font-weight: 200;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  color: #f5f0e8;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gate-title-en {
+  font-size: clamp(1rem, 4vw, 1.4rem);
+  font-style: italic;
+  color: #8a847c;
+}
+
+.gate-question {
+  font-size: 0.75rem;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+  color: #6a6560;
+  margin: 0 0 2.5rem;
+}
+
+.gate-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gate-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 2.5rem;
+  background: transparent;
+  border: 1px solid #3a3632;
+  color: #e8e0d8;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  min-height: 52px;
+}
+
+.gate-button:hover,
+.gate-button:focus {
+  border-color: #c9b8a6;
+  color: #f5f0e8;
+  background: rgba(201, 184, 166, 0.08);
+  outline: none;
+}
+
+.gate-button:focus-visible {
+  box-shadow: 0 0 0 2px #c9b8a6;
+}
+
+.button-arrow {
+  font-size: 0.7rem;
+  transition: transform 0.3s ease;
+}
+
+.gate-button:hover .button-arrow {
+  transform: translateX(4px);
+}
+
+@media (min-width: 480px) {
+  .gate-buttons {
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-content,
+  .grain-overlay {
+    animation: none;
+    opacity: 1;
+  }
+}

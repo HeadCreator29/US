@@ -1,0 +1,116 @@
+.admin-stats-screen {
+  position: fixed;
+  inset: 0;
+  background: #0a0a0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 95;
+  overflow-y: auto;
+}
+
+.admin-stats-card {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 100%);
+  background: #11100f;
+  border: 1px solid #1a1816;
+  padding: clamp(1.75rem, 5vw, 3rem);
+  text-align: center;
+}
+
+.admin-stats-title {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 200;
+  font-size: clamp(1.1rem, 3.5vw, 1.5rem);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #f5f0e8;
+  margin: 0 0 2rem;
+}
+
+.admin-stats-list {
+  margin: 0 0 2rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+.admin-stats-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-bottom: 1px solid #1a1816;
+  padding-bottom: 1.25rem;
+}
+
+.admin-stats-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.admin-stats-label {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8a847c;
+  margin: 0;
+}
+
+.admin-stats-value {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  color: #f5f0e8;
+  margin: 0;
+}
+
+.admin-stats-total {
+  font-size: clamp(2rem, 8vw, 3rem);
+  font-weight: 200;
+  letter-spacing: 0.1em;
+  color: #c9b8a6;
+}
+
+.admin-stats-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-stats-reset {
+  background: transparent;
+  border: none;
+  color: #4a4540;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  transition: color 0.35s ease;
+}
+
+.admin-stats-reset:hover,
+.admin-stats-reset:focus {
+  color: #8a6a5a;
+  outline: none;
+}
+
+.admin-stats-reset:focus-visible {
+  box-shadow: 0 0 0 2px #c9b8a6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-stats-reset {
+    transition: none;
+  }
+}

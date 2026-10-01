@@ -1,0 +1,112 @@
+:root {
+  --bg: #0a0a0a;
+  --bg-elevated: #11100f;
+  --fg: #f5f0e8;
+  --fg-muted: #d4cec6;
+  --accent: #c9b8a6;
+  --accent-muted: #8a847c;
+  --border: #1a1816;
+  --border-hover: #3a3632;
+  --error: #8a6a5a;
+  --error-bg: rgba(138, 106, 90, 0.05);
+  --success: #c9b8a6;
+  --success-bg: rgba(201, 184, 166, 0.05);
+  --muted: #4a4540;
+  --muted-dark: #3a3632;
+}
+
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  position: relative;
+}
+
+.app-loading {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  background: #0a0a0a;
+}
+
+.loading-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  background: #0a0a0a;
+}
+
+:focus-visible {
+  outline: none;
+}
+
+input[type="text"],
+input[type="password"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="text"]::-webkit-input-placeholder,
+input[type="password"]::-webkit-input-placeholder {
+  color: #3a3632;
+}
+
+input[type="text"]::-moz-placeholder,
+input[type="password"]::-moz-placeholder {
+  color: #3a3632;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Botón de cierre al final de cada capítulo: vuelve al inicio del archivo */
+.back-home-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.9rem 2.2rem;
+  min-height: 52px;
+  background: transparent;
+  border: 1px solid #3a3632;
+  color: #e8e0d8;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.35s ease;
+}
+
+.back-home-button:hover,
+.back-home-button:focus {
+  border-color: #c9b8a6;
+  color: #f5f0e8;
+  background: rgba(201, 184, 166, 0.08);
+  outline: none;
+}
+
+.back-home-button:focus-visible {
+  box-shadow: 0 0 0 2px #c9b8a6;
+}
+
+.gallery-footer,
+.section-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

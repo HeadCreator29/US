@@ -1,0 +1,191 @@
+.us-section {
+  min-height: 100vh;
+  padding: 6rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #1a1816;
+}
+
+/* Balancing spacer keeps the title truly centered against the back button */
+.section-header::after,
+.gallery-header::after {
+  content: '';
+  justify-self: end;
+  width: 60px;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  background: transparent;
+  border: none;
+  color: #8a847c;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.back-button:hover,
+.back-button:focus {
+  color: #f5f0e8;
+}
+
+.back-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #c9b8a6;
+  border-radius: 2px;
+}
+
+.section-title {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+  font-weight: 200;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #f5f0e8;
+  margin: 0;
+  text-align: center;
+  flex: none;
+}
+
+.section-intro {
+  text-align: center;
+  margin-bottom: 3rem;
+  opacity: 0;
+  animation: introFade 0.8s ease-out 0.3s forwards;
+}
+
+@keyframes introFade {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.intro-text {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(1rem, 3vw, 1.25rem);
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: 0.01em;
+  line-height: 1.6;
+  color: #c9b8a6;
+  margin: 0;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.moments-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.moment-card {
+  display: flex;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: rgba(26, 24, 22, 0.5);
+  border: 1px solid #1a1816;
+  border-radius: 2px;
+  opacity: 0;
+  transform: translateX(-30px);
+  transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.moment-card.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.moment-number {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 200;
+  letter-spacing: 0.05em;
+  color: #3a3632;
+  flex-shrink: 0;
+  min-width: 3rem;
+  text-align: right;
+  line-height: 1.4;
+}
+
+.moment-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.moment-text {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  line-height: 1.65;
+  color: #d4cec6;
+  margin: 0;
+}
+
+.moment-date {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.55rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #4a4540;
+  align-self: flex-start;
+}
+
+.section-footer {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #1a1816;
+  text-align: center;
+}
+
+.archive-mark {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.55rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #3a3632;
+}
+
+@media (min-width: 768px) {
+  .us-section {
+    padding: 6rem 3rem 4rem;
+  }
+
+  .moment-card {
+    padding: 1.5rem 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-intro,
+  .moment-card {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

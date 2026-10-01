@@ -1,0 +1,233 @@
+.login-screen {
+  position: fixed;
+  inset: 0;
+  background: #0a0a0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.grain-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  animation: grainShift 8s infinite;
+}
+
+@keyframes grainShift {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-1%, 1%); }
+  50% { transform: translate(1%, -1%); }
+  75% { transform: translate(-1%, -1%); }
+}
+
+.login-form {
+  width: 100%;
+  max-width: 320px;
+  z-index: 1;
+  opacity: 0;
+  animation: formReveal 0.8s ease-out 0.2s forwards;
+}
+
+@keyframes formReveal {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.access-title {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 200;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #f5f0e8;
+  margin: 0 0 0.75rem;
+  line-height: 1.1;
+}
+
+.access-subtitle {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  color: #8a847c;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field-label {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #6a6560;
+}
+
+.field-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #2a2622;
+  color: #f5f0e8;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  padding: 0.75rem 0;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.field-input::placeholder {
+  color: #3a3632;
+}
+
+.field-input:hover {
+  border-bottom-color: #3a3632;
+}
+
+.field-input:focus {
+  border-bottom-color: #c9b8a6;
+}
+
+.field-input[aria-invalid="true"] {
+  border-bottom-color: #8a6a5a;
+}
+
+.field-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.access-note {
+  text-align: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #4a4540;
+  margin: 0.5rem 0 2rem;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 1rem;
+  background: transparent;
+  border: 1px solid #3a3632;
+  color: #e8e0d8;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submit-button:hover:not(:disabled),
+.submit-button:focus:not(:disabled) {
+  border-color: #c9b8a6;
+  color: #f5f0e8;
+  background: rgba(201, 184, 166, 0.08);
+}
+
+.submit-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #c9b8a6;
+}
+
+.submit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.denied-message {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #8a6a5a;
+  background: rgba(138, 106, 90, 0.05);
+  animation: deniedShake 0.4s ease;
+}
+
+@keyframes deniedShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.denied-text {
+  display: block;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #8a6a5a;
+  margin-bottom: 0.5rem;
+}
+
+.denied-hint {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 300;
+  font-style: italic;
+  color: #9a7a6a;
+}
+
+.granted-message {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #c9b8a6;
+  background: rgba(201, 184, 166, 0.05);
+  animation: grantedPulse 0.8s ease;
+}
+
+@keyframes grantedPulse {
+  0% { opacity: 0; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.granted-text {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #c9b8a6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-form,
+  .grain-overlay,
+  .denied-message,
+  .granted-message {
+    animation: none;
+    opacity: 1;
+  }
+}

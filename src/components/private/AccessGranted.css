@@ -1,0 +1,77 @@
+.access-granted-screen {
+  position: fixed;
+  inset: 0;
+  background: #0a0a0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 95;
+  overflow: hidden;
+}
+
+.grain-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  animation: grainShift 8s infinite;
+}
+
+@keyframes grainShift {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-1%, 1%); }
+  50% { transform: translate(1%, -1%); }
+  75% { transform: translate(-1%, -1%); }
+}
+
+.access-content {
+  text-align: center;
+  z-index: 1;
+}
+
+.message {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 200;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #f5f0e8;
+  opacity: 0;
+}
+
+.message.granted {
+  font-size: clamp(1.25rem, 4vw, 2rem);
+  animation: messageReveal 1s ease-out 0.2s forwards;
+}
+
+.message.welcome {
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  margin-top: 1.5rem;
+  animation: messageReveal 1s ease-out 1.2s forwards;
+}
+
+.message.welcome span {
+  font-weight: 300;
+  color: #c9b8a6;
+}
+
+@keyframes messageReveal {
+  from {
+    opacity: 0;
+    letter-spacing: 0.4em;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.2em;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message {
+    opacity: 1;
+    animation: none;
+  }
+  .message.granted { letter-spacing: 0.2em; }
+  .message.welcome { letter-spacing: 0.2em; }
+}

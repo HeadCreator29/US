@@ -1,0 +1,207 @@
+.after-dark-section {
+  min-height: 100vh;
+  padding: 6rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  background: #050505;
+}
+
+.section-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #1a1816;
+}
+
+/* Balancing spacer keeps the title truly centered against the back button */
+.section-header::after,
+.gallery-header::after {
+  content: '';
+  justify-self: end;
+  width: 60px;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  background: transparent;
+  border: none;
+  color: #6a6560;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.back-button:hover,
+.back-button:focus {
+  color: #c9b8a6;
+}
+
+.back-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #c9b8a6;
+  border-radius: 2px;
+}
+
+.section-title {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+  font-weight: 200;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #c9b8a6;
+  margin: 0;
+  text-align: center;
+  flex: none;
+}
+
+.section-intro {
+  text-align: center;
+  margin-bottom: 3rem;
+  opacity: 0;
+  animation: introFade 1s ease-out 0.5s forwards;
+}
+
+@keyframes introFade {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.intro-text {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(1rem, 3vw, 1.25rem);
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: 0.01em;
+  line-height: 1.6;
+  color: #8a847c;
+  margin: 0;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.lines-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  max-width: 700px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 2rem 0;
+}
+
+.line {
+  text-align: center;
+  opacity: 0;
+  transform: translateY(40px) scale(0.95);
+  filter: blur(4px);
+  transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.line.current {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+.line.past {
+  opacity: 0.3;
+  transform: translateY(-20px) scale(0.9);
+  filter: blur(2px);
+}
+
+.line.future {
+  opacity: 0;
+}
+
+.line-text {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(1.1rem, 3.5vw, 1.5rem);
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  color: #d4cec6;
+  margin: 0;
+  text-shadow: 0 0 40px rgba(201, 184, 166, 0.1);
+}
+
+.line.final {
+  margin-top: 2rem;
+  opacity: 0;
+  animation: finalReveal 1s ease-out 0.5s forwards;
+}
+
+@keyframes finalReveal {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+.final-text {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+  font-weight: 200;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #c9b8a6;
+  text-shadow: 0 0 60px rgba(201, 184, 166, 0.2);
+}
+
+.section-footer {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #1a1816;
+  text-align: center;
+}
+
+.archive-mark {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.55rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #3a3632;
+}
+
+@media (min-width: 768px) {
+  .after-dark-section {
+    padding: 6rem 3rem 4rem;
+  }
+
+  .lines-container {
+    gap: 3rem;
+  }
+
+  .line-text {
+    font-size: clamp(1.25rem, 3vw, 1.75rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-intro,
+  .line,
+  .line.final {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  .line.past {
+    opacity: 0.4;
+  }
+  .line.future {
+    opacity: 0;
+  }
+}
