@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { PRIVATE_ACCESS } from '../../config/privateAccess';
 import { getGlobalStats, getStats, resetGlobalStats, type StatsSource } from '../../utils/visitCounter';
 import './AdminStats.css';
 
@@ -52,9 +53,10 @@ export function AdminStats({ onBack }: AdminStatsProps) {
 
   const handleReset = async () => {
     if (window.confirm(t('adminReset') + '?')) {
-      // Global reset is dashboard-only; this clears the local cache.
-      setStats(await resetGlobalStats());
-      setSource('local');
+      // Clears local cache first, then attempts the global RPC reset.
+      const { stats, global } = await resetGlobalStats(PRIVATE_ACCESS.password);
+      setStats(stats);
+      setSource(global ? 'global' : 'local');
     }
   };
 

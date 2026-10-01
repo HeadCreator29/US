@@ -187,8 +187,22 @@ export async function recordGlobalVisit(): Promise<GlobalStats> {
   }
 }
 
-// Global reset is dashboard-only on purpose: there is no public reset
-// endpoint, so this only clears the local cache. Never throws.
-export async function resetGlobalStats(): Promise<VisitStats> {
-  return resetStats();
+// Admin global reset via the reset_visits_us RPC. Clears the local cache
+// first, then attempts the server-side reset (single visits_us id = 1 row).
+// Returns global: true only when the RPC succeeds; unconfigured, offline,
+// or any RPC error keeps the reset local-only. Never throws.
+export async function resetGlobalStats(password: string): Promise<{ stats: VisitStats; global: boolean }> {
+  const cleared = resetStats();
+  try {
+    if (!isSupabaseConfigured() || isOffline()) {
+      return { stats: cleared, global: false };
+    }
+    const { error } = await supabase.rpc('reset_visits_us', { secret: password });
+    if (error) {
+      return { stats: cleared, global: false };
+    }
+    return { stats: cleared, global: true };
+  } catch {
+    return { stats: cleared, global: false };
+  }
 }
