@@ -12,14 +12,14 @@ export interface GlobalStats extends VisitStats {
 
 const STORAGE_KEY = 'privatearchive_visits_v4';
 
-// --- Global counter (countapi.mileshilliard.com, keyless) ---
-// CounterAPI.dev V2 was abandoned: it requires signup + a dashboard
-// workspace + API key and does NOT auto-create workspaces, so every
-// request failed with 404 "Workspace not found" and the counter silently
-// fell back to local-only. This provider needs no signup, no keys, no SDK:
-// GET /hit/<key> creates the key on first use and increments it.
-const GLOBAL_BASE = 'https://countapi.mileshilliard.com/api/v1';
-const GLOBAL_KEY = 'privatearchive-us-visits';
+// --- Global counter (first-party Vercel Serverless + KV) ---
+// Same-origin endpoint, no keys or signup needed on the client:
+//   GET  /api/visits                    -> { total, firstVisit, lastVisit }
+//   POST /api/visits { action: 'hit' }  -> increments, returns updated stats
+// Server timestamps are truly global (shared by every visitor). When the
+// API is unreachable or KV is not bound yet (503 kv-missing), every helper
+// below falls back to the local cache and never throws.
+const GLOBAL_ENDPOINT = '/api/visits';
 const TIMEOUT_MS = 5000;
 
 const EMPTY_STATS: VisitStats = {
@@ -91,14 +91,22 @@ export function resetStats(): VisitStats {
 
 // --- Global counter helpers ---
 
+// Server payload shape from /api/visits.
+interface ServerStats {
+  total?: unknown;
+  firstVisit?: unknown;
+  lastVisit?: unknown;
+  error?: unknown;
+}
+
 // Fetch JSON with a timeout. Throws on network error, timeout, or bad HTTP.
 // The thrown Error carries a numeric `status` property when the server
-// responded (e.g. 404 for a key that was never created).
-async function fetchJson(path: string): Promise<unknown> {
+// responded (e.g. 503 when KV is not bound yet).
+async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(`${GLOBAL_BASE}${path}`, { signal: controller.signal });
+    const res = await fetch(url, { ...init, signal: controller.signal });
     if (!res.ok) {
       const err = new Error(`Global counter HTTP ${res.status}`) as Error & {
         status: number;
@@ -112,63 +120,41 @@ async function fetchJson(path: string): Promise<unknown> {
   }
 }
 
-// The API returns { key, value } where value may be a number or a numeric
-// string. Anything else (missing, NaN, infinite) means 0.
-function parseValue(json: unknown): number {
-  if (typeof json !== 'object' || json === null) return 0;
-  const value = (json as { value?: unknown }).value;
-  const num = Number(value);
-  return Number.isFinite(num) && num >= 0 ? num : 0;
+// Validate a server payload: numeric total plus string-or-null timestamps.
+// Returns null when the payload is not a usable global answer.
+function parseServerStats(json: unknown): VisitStats | null {
+  if (typeof json !== 'object' || json === null) return null;
+  const payload = json as ServerStats;
+  const total = Number(payload.total);
+  if (!Number.isFinite(total) || total < 0) return null;
+  return {
+    total: Math.floor(total),
+    firstVisit: typeof payload.firstVisit === 'string' ? payload.firstVisit : null,
+    lastVisit: typeof payload.lastVisit === 'string' ? payload.lastVisit : null,
+  };
 }
 
-// Read the shared global total, merged with local first/last dates
-// (the global service tracks counts only, no first/last timestamps).
-// A missing key (404 or { error: 'Key not found' }) means the counter was
-// never created yet — report 0 with source 'global', not a local fallback.
-// Network/timeout errors fall back to local stats. Never throws.
+function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
+
+// Read the shared global stats. Uses the server first/last timestamps,
+// which are now truly global (one counter for every visitor).
+// Missing KV, network, or timeout errors fall back to local stats.
+// Never throws.
 export async function getGlobalStats(): Promise<GlobalStats> {
   const local = getStats();
   try {
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    if (isOffline()) {
       return { ...local, source: 'local' };
     }
-    const json = await fetchJson(`/get/${GLOBAL_KEY}`);
-    if (
-      typeof json === 'object' &&
-      json !== null &&
-      'error' in json &&
-      !('value' in json)
-    ) {
-      // Key does not exist yet — legit zero, still a global answer.
-      return {
-        total: 0,
-        firstVisit: local.firstVisit,
-        lastVisit: local.lastVisit,
-        source: 'global',
-      };
+    const json = await fetchJson(GLOBAL_ENDPOINT);
+    const server = parseServerStats(json);
+    if (!server) {
+      return { ...local, source: 'local' };
     }
-    return {
-      total: parseValue(json),
-      firstVisit: local.firstVisit,
-      lastVisit: local.lastVisit,
-      source: 'global',
-    };
-  } catch (err) {
-    // 404 = key never created yet — legit zero, still a global answer.
-    // Anything else (timeout, offline, CORS, adblock) falls back to local.
-    if (
-      typeof err === 'object' &&
-      err !== null &&
-      'status' in err &&
-      (err as { status: unknown }).status === 404
-    ) {
-      return {
-        total: 0,
-        firstVisit: local.firstVisit,
-        lastVisit: local.lastVisit,
-        source: 'global',
-      };
-    }
+    return { ...server, source: 'global' };
+  } catch {
     return { ...local, source: 'local' };
   }
 }
@@ -179,9 +165,9 @@ export async function getGlobalStats(): Promise<GlobalStats> {
 let recordedGlobalThisLoad = false;
 
 // Record one global visit. Updates the local cache synchronously first
-// (instant feedback + first/last timestamps), then increments the shared
-// counter and merges the global total over the local dates.
-// Deduped per page load. Never throws — returns local stats on failure.
+// (instant feedback + offline cache), then POSTs a hit and merges the
+// server values over local storage. Deduped per page load.
+// Never throws — returns local stats on failure.
 export async function recordGlobalVisit(): Promise<GlobalStats> {
   if (recordedGlobalThisLoad) {
     const current = getStats();
@@ -193,31 +179,50 @@ export async function recordGlobalVisit(): Promise<GlobalStats> {
   const local = recordVisit();
 
   try {
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    if (isOffline()) {
       return { ...local, source: 'local' };
     }
-    const json = await fetchJson(`/hit/${GLOBAL_KEY}`);
-    const merged: VisitStats = {
-      total: parseValue(json),
-      firstVisit: local.firstVisit,
-      lastVisit: local.lastVisit,
-    };
-    // Store the global total locally so the next instant load shows it.
-    saveStats(merged);
-    return { ...merged, source: 'global' };
+    const json = await fetchJson(GLOBAL_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'hit' }),
+    });
+    const server = parseServerStats(json);
+    if (!server) {
+      return { ...local, source: 'local' };
+    }
+    // Store the server values locally so the next instant load shows them.
+    saveStats(server);
+    return { ...server, source: 'global' };
   } catch {
     return { ...local, source: 'local' };
   }
 }
 
-// Reset the shared counter, then clear the local cache.
-// Falls back to a local-only reset on error. Never throws.
-export async function resetGlobalStats(): Promise<VisitStats> {
+// Reset the shared counter (password-protected server side), then clear
+// the local cache. A 403 (wrong password) leaves the local cache intact
+// so a rejected reset does not desync the admin view; network/KV failures
+// fall back to a local-only reset. Never throws.
+export async function resetGlobalStats(password?: string): Promise<VisitStats> {
   try {
-    if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-      await fetchJson(`/set/${GLOBAL_KEY}?value=0`);
+    if (!isOffline()) {
+      await fetchJson(GLOBAL_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset', password }),
+      });
     }
-  } catch {
+  } catch (err) {
+    // Wrong password: keep the local cache so the UI still shows the
+    // server state on next load instead of a misleading zero.
+    if (
+      typeof err === 'object' &&
+      err !== null &&
+      'status' in err &&
+      (err as { status: unknown }).status === 403
+    ) {
+      return getStats();
+    }
     // Fall through to local reset — global reset failed, still clear cache.
   }
   return resetStats();
