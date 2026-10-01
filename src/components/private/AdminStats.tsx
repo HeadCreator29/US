@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { getStats, resetStats } from '../../utils/visitCounter';
+import { getGlobalStats, getStats, resetGlobalStats, type StatsSource } from '../../utils/visitCounter';
 import './AdminStats.css';
 
 interface AdminStatsProps {
@@ -25,11 +25,35 @@ function formatVisitDate(iso: string | null, lang: string): string {
 
 export function AdminStats({ onBack }: AdminStatsProps) {
   const { lang, t } = useLanguage();
+  // Instant local stats first, then replaced by the global total when loaded.
   const [stats, setStats] = useState(getStats);
+  const [source, setSource] = useState<StatsSource | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleReset = () => {
+  useEffect(() => {
+    let cancelled = false;
+    getGlobalStats()
+      .then((global) => {
+        if (cancelled) return;
+        setStats({ total: global.total, firstVisit: global.firstVisit, lastVisit: global.lastVisit });
+        setSource(global.source);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSource('local');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleReset = async () => {
     if (window.confirm(t('adminReset') + '?')) {
-      setStats(resetStats());
+      setStats(await resetGlobalStats());
+      setSource('global');
     }
   };
 
@@ -42,20 +66,28 @@ export function AdminStats({ onBack }: AdminStatsProps) {
       <div className="admin-stats-card">
         <h1 className="admin-stats-title">{t('adminTitle')}</h1>
 
-        <dl className="admin-stats-list">
-          <div className="admin-stats-row">
-            <dt className="admin-stats-label">{t('adminTotal')}</dt>
-            <dd className="admin-stats-value admin-stats-total">{stats.total}</dd>
-          </div>
-          <div className="admin-stats-row">
-            <dt className="admin-stats-label">{t('adminFirst')}</dt>
-            <dd className="admin-stats-value">{firstLabel}</dd>
-          </div>
-          <div className="admin-stats-row">
-            <dt className="admin-stats-label">{t('adminLast')}</dt>
-            <dd className="admin-stats-value">{lastLabel}</dd>
-          </div>
-        </dl>
+        {loading ? (
+          <p className="admin-stats-loading">{t('adminLoading')}</p>
+        ) : (
+          <dl className="admin-stats-list">
+            <div className="admin-stats-row">
+              <dt className="admin-stats-label">{t('adminTotal')}</dt>
+              <dd className="admin-stats-value admin-stats-total">{stats.total}</dd>
+            </div>
+            <div className="admin-stats-row">
+              <dt className="admin-stats-label">{t('adminFirst')}</dt>
+              <dd className="admin-stats-value">{firstLabel}</dd>
+            </div>
+            <div className="admin-stats-row">
+              <dt className="admin-stats-label">{t('adminLast')}</dt>
+              <dd className="admin-stats-value">{lastLabel}</dd>
+            </div>
+          </dl>
+        )}
+
+        {source === 'local' && !loading && (
+          <p className="admin-stats-fallback">{t('adminLocalFallback')}</p>
+        )}
 
         <div className="admin-stats-actions">
           <button type="button" className="back-home-button" onClick={onBack}>

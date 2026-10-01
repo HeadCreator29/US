@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import type { Language } from './i18n/strings';
 import { LanguageGate } from './components/private/LanguageGate';
@@ -7,7 +8,7 @@ import { LoginScreen } from './components/private/LoginScreen';
 import { AccessGranted } from './components/private/AccessGranted';
 import { ArchiveHome } from './components/private/ArchiveHome';
 import { AdminStats } from './components/private/AdminStats';
-import { recordVisit } from './utils/visitCounter';
+import { recordGlobalVisit, recordVisit } from './utils/visitCounter';
 import './App.css';
 
 type AppStage = 'language' | 'intro' | 'login' | 'access' | 'archive';
@@ -47,7 +48,14 @@ function Stages() {
   useEffect(() => {
     const admin = isAdminRoute();
     setIsAdmin(admin);
-    if (!admin) recordVisit();
+    if (!admin) {
+      // Sync local increment for instant feedback, plus fire-and-forget
+      // global increment (never blocks render, failures fall back to local).
+      recordVisit();
+      recordGlobalVisit().catch(() => {
+        // Intentionally silent — local cache already updated.
+      });
+    }
     setMounted(true);
   }, []);
 
@@ -112,6 +120,7 @@ function App() {
   return (
     <LanguageProvider>
       <Stages />
+      <SpeedInsights />
     </LanguageProvider>
   );
 }

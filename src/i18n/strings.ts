@@ -169,6 +169,14 @@ export const STRINGS = {
     es: 'Sin visitas registradas',
     en: 'No visits recorded',
   },
+  adminLoading: {
+    es: 'Cargando visitas globales…',
+    en: 'Loading global visits…',
+  },
+  adminLocalFallback: {
+    es: 'Mostrando visitas de este dispositivo (global no disponible).',
+    en: 'Showing visits from this device (global unavailable).',
+  },
 } as const;
 
 export type StringKey = keyof typeof STRINGS;
