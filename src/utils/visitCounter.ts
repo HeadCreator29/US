@@ -1,5 +1,3 @@
-import { Counter } from 'counterapi';
-
 export interface VisitStats {
   total: number;
   lastVisit: string | null;
@@ -14,12 +12,14 @@ export interface GlobalStats extends VisitStats {
 
 const STORAGE_KEY = 'privatearchive_visits_v4';
 
-// CounterAPI.dev V2 workspace. Public workspace, no accessToken needed.
-// NOTE: if the 'privatearchive' workspace does not exist yet, the first
-// counter.up('visits') call auto-creates both the workspace and the counter.
-// That is expected behavior, not an error.
-const WORKSPACE = 'privatearchive';
-const COUNTER_NAME = 'visits';
+// --- Global counter (countapi.mileshilliard.com, keyless) ---
+// CounterAPI.dev V2 was abandoned: it requires signup + a dashboard
+// workspace + API key and does NOT auto-create workspaces, so every
+// request failed with 404 "Workspace not found" and the counter silently
+// fell back to local-only. This provider needs no signup, no keys, no SDK:
+// GET /hit/<key> creates the key on first use and increments it.
+const GLOBAL_BASE = 'https://countapi.mileshilliard.com/api/v1';
+const GLOBAL_KEY = 'privatearchive-us-visits';
 const TIMEOUT_MS = 5000;
 
 const EMPTY_STATS: VisitStats = {
@@ -89,41 +89,86 @@ export function resetStats(): VisitStats {
   return { ...EMPTY_STATS };
 }
 
-// --- Global counter (CounterAPI.dev V2) ---
+// --- Global counter helpers ---
 
-function createClient(): Counter {
-  return new Counter({ workspace: WORKSPACE, timeout: TIMEOUT_MS });
+// Fetch JSON with a timeout. Throws on network error, timeout, or bad HTTP.
+// The thrown Error carries a numeric `status` property when the server
+// responded (e.g. 404 for a key that was never created).
+async function fetchJson(path: string): Promise<unknown> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(`${GLOBAL_BASE}${path}`, { signal: controller.signal });
+    if (!res.ok) {
+      const err = new Error(`Global counter HTTP ${res.status}`) as Error & {
+        status: number;
+      };
+      err.status = res.status;
+      throw err;
+    }
+    return (await res.json()) as unknown;
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
 
-// The API returns up_count / down_count (no plain "count" field).
-// Global total = ups minus downs, clamped at zero.
-// The reset response omits both fields, which means total 0.
-function extractTotal(data: { up_count?: number; down_count?: number } | undefined): number {
-  if (!data) return 0;
-  const up = typeof data.up_count === 'number' ? data.up_count : 0;
-  const down = typeof data.down_count === 'number' ? data.down_count : 0;
-  return Math.max(0, up - down);
+// The API returns { key, value } where value may be a number or a numeric
+// string. Anything else (missing, NaN, infinite) means 0.
+function parseValue(json: unknown): number {
+  if (typeof json !== 'object' || json === null) return 0;
+  const value = (json as { value?: unknown }).value;
+  const num = Number(value);
+  return Number.isFinite(num) && num >= 0 ? num : 0;
 }
 
 // Read the shared global total, merged with local first/last dates
 // (the global service tracks counts only, no first/last timestamps).
-// Falls back to local stats on error, timeout, or offline. Never throws.
+// A missing key (404 or { error: 'Key not found' }) means the counter was
+// never created yet — report 0 with source 'global', not a local fallback.
+// Network/timeout errors fall back to local stats. Never throws.
 export async function getGlobalStats(): Promise<GlobalStats> {
   const local = getStats();
   try {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       return { ...local, source: 'local' };
     }
-    const client = createClient();
-    const res = await client.get(COUNTER_NAME);
-    const total = extractTotal(res?.data);
+    const json = await fetchJson(`/get/${GLOBAL_KEY}`);
+    if (
+      typeof json === 'object' &&
+      json !== null &&
+      'error' in json &&
+      !('value' in json)
+    ) {
+      // Key does not exist yet — legit zero, still a global answer.
+      return {
+        total: 0,
+        firstVisit: local.firstVisit,
+        lastVisit: local.lastVisit,
+        source: 'global',
+      };
+    }
     return {
-      total,
+      total: parseValue(json),
       firstVisit: local.firstVisit,
       lastVisit: local.lastVisit,
       source: 'global',
     };
-  } catch {
+  } catch (err) {
+    // 404 = key never created yet — legit zero, still a global answer.
+    // Anything else (timeout, offline, CORS, adblock) falls back to local.
+    if (
+      typeof err === 'object' &&
+      err !== null &&
+      'status' in err &&
+      (err as { status: unknown }).status === 404
+    ) {
+      return {
+        total: 0,
+        firstVisit: local.firstVisit,
+        lastVisit: local.lastVisit,
+        source: 'global',
+      };
+    }
     return { ...local, source: 'local' };
   }
 }
@@ -151,11 +196,9 @@ export async function recordGlobalVisit(): Promise<GlobalStats> {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       return { ...local, source: 'local' };
     }
-    const client = createClient();
-    const res = await client.up(COUNTER_NAME);
-    const total = extractTotal(res?.data);
+    const json = await fetchJson(`/hit/${GLOBAL_KEY}`);
     const merged: VisitStats = {
-      total,
+      total: parseValue(json),
       firstVisit: local.firstVisit,
       lastVisit: local.lastVisit,
     };
@@ -172,8 +215,7 @@ export async function recordGlobalVisit(): Promise<GlobalStats> {
 export async function resetGlobalStats(): Promise<VisitStats> {
   try {
     if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-      const client = createClient();
-      await client.reset(COUNTER_NAME);
+      await fetchJson(`/set/${GLOBAL_KEY}?value=0`);
     }
   } catch {
     // Fall through to local reset — global reset failed, still clear cache.
