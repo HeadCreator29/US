@@ -1,3 +1,5 @@
+import { isSupabaseConfigured, supabase } from './supabaseClient';
+
 export interface VisitStats {
   total: number;
   lastVisit: string | null;
@@ -12,16 +14,14 @@ export interface GlobalStats extends VisitStats {
 
 const STORAGE_KEY = 'privatearchive_visits_v4';
 
-// --- Global counter (first-party Vercel Serverless + KV) ---
-// Same-origin endpoint, no keys or signup needed on the client:
-//   GET  /api/visits                    -> { total, firstVisit, lastVisit }
-//   POST /api/visits { action: 'hit' }  -> increments, returns updated stats
-// Server timestamps are truly global (shared by every visitor). When the
-// API is unreachable or KV is not bound yet (503 kv-missing), every helper
-// below falls back to the local cache and never throws.
-const GLOBAL_ENDPOINT = '/api/visits';
-const TIMEOUT_MS = 5000;
-
+// --- Global counter (Supabase, the only global provider) ---
+// Table `visits_us` holds a single row (id = 1):
+//   SELECT total, first_visit, last_visit FROM visits_us WHERE id = 1
+// Increments go through the `hit_visits_us()` RPC, which bumps the total,
+// stamps last_visit (and first_visit once), and returns the updated row.
+// Every helper below falls back to the local cache and never throws: when
+// Supabase is unconfigured, offline, or errors (missing table, RLS denial,
+// network failure), callers get local stats with source 'local'.
 const EMPTY_STATS: VisitStats = {
   total: 0,
   lastVisit: null,
@@ -89,48 +89,31 @@ export function resetStats(): VisitStats {
   return { ...EMPTY_STATS };
 }
 
-// --- Global counter helpers ---
+// --- Global counter helpers (Supabase only) ---
 
-// Server payload shape from /api/visits.
-interface ServerStats {
+// Row shape from visits_us / hit_visits_us(). The RPC may return a single
+// row object or a one-element array depending on how it is declared.
+interface SupabaseVisitRow {
   total?: unknown;
-  firstVisit?: unknown;
-  lastVisit?: unknown;
-  error?: unknown;
+  first_visit?: unknown;
+  last_visit?: unknown;
 }
 
-// Fetch JSON with a timeout. Throws on network error, timeout, or bad HTTP.
-// The thrown Error carries a numeric `status` property when the server
-// responded (e.g. 503 when KV is not bound yet).
-async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    const res = await fetch(url, { ...init, signal: controller.signal });
-    if (!res.ok) {
-      const err = new Error(`Global counter HTTP ${res.status}`) as Error & {
-        status: number;
-      };
-      err.status = res.status;
-      throw err;
-    }
-    return (await res.json()) as unknown;
-  } finally {
-    window.clearTimeout(timer);
+// Validate a Supabase row: numeric total plus string-or-null timestamps.
+// Maps snake_case columns to the camelCase VisitStats shape.
+// Returns null when the row is not a usable global answer.
+function parseSupabaseRow(row: unknown): VisitStats | null {
+  if (Array.isArray(row)) {
+    return row.length > 0 ? parseSupabaseRow(row[0]) : null;
   }
-}
-
-// Validate a server payload: numeric total plus string-or-null timestamps.
-// Returns null when the payload is not a usable global answer.
-function parseServerStats(json: unknown): VisitStats | null {
-  if (typeof json !== 'object' || json === null) return null;
-  const payload = json as ServerStats;
-  const total = Number(payload.total);
+  if (typeof row !== 'object' || row === null) return null;
+  const record = row as SupabaseVisitRow;
+  const total = Number(record.total);
   if (!Number.isFinite(total) || total < 0) return null;
   return {
     total: Math.floor(total),
-    firstVisit: typeof payload.firstVisit === 'string' ? payload.firstVisit : null,
-    lastVisit: typeof payload.lastVisit === 'string' ? payload.lastVisit : null,
+    firstVisit: typeof record.first_visit === 'string' ? record.first_visit : null,
+    lastVisit: typeof record.last_visit === 'string' ? record.last_visit : null,
   };
 }
 
@@ -138,18 +121,24 @@ function isOffline(): boolean {
   return typeof navigator !== 'undefined' && navigator.onLine === false;
 }
 
-// Read the shared global stats. Uses the server first/last timestamps,
-// which are now truly global (one counter for every visitor).
-// Missing KV, network, or timeout errors fall back to local stats.
-// Never throws.
+// Read the shared global stats from the visits_us id = 1 row.
+// Unconfigured/offline/error (missing table, RLS denial, network failure)
+// falls back to local stats. Never throws.
 export async function getGlobalStats(): Promise<GlobalStats> {
   const local = getStats();
   try {
-    if (isOffline()) {
+    if (!isSupabaseConfigured() || isOffline()) {
       return { ...local, source: 'local' };
     }
-    const json = await fetchJson(GLOBAL_ENDPOINT);
-    const server = parseServerStats(json);
+    const { data, error } = await supabase
+      .from('visits_us')
+      .select('total,first_visit,last_visit')
+      .eq('id', 1)
+      .maybeSingle();
+    if (error || !data) {
+      return { ...local, source: 'local' };
+    }
+    const server = parseSupabaseRow(data);
     if (!server) {
       return { ...local, source: 'local' };
     }
@@ -165,8 +154,8 @@ export async function getGlobalStats(): Promise<GlobalStats> {
 let recordedGlobalThisLoad = false;
 
 // Record one global visit. Updates the local cache synchronously first
-// (instant feedback + offline cache), then POSTs a hit and merges the
-// server values over local storage. Deduped per page load.
+// (instant feedback + offline cache), then calls hit_visits_us() and merges
+// the returned server values over local storage. Deduped per page load.
 // Never throws — returns local stats on failure.
 export async function recordGlobalVisit(): Promise<GlobalStats> {
   if (recordedGlobalThisLoad) {
@@ -179,15 +168,14 @@ export async function recordGlobalVisit(): Promise<GlobalStats> {
   const local = recordVisit();
 
   try {
-    if (isOffline()) {
+    if (!isSupabaseConfigured() || isOffline()) {
       return { ...local, source: 'local' };
     }
-    const json = await fetchJson(GLOBAL_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'hit' }),
-    });
-    const server = parseServerStats(json);
+    const { data, error } = await supabase.rpc('hit_visits_us');
+    if (error || !data) {
+      return { ...local, source: 'local' };
+    }
+    const server = parseSupabaseRow(data);
     if (!server) {
       return { ...local, source: 'local' };
     }
@@ -199,31 +187,8 @@ export async function recordGlobalVisit(): Promise<GlobalStats> {
   }
 }
 
-// Reset the shared counter (password-protected server side), then clear
-// the local cache. A 403 (wrong password) leaves the local cache intact
-// so a rejected reset does not desync the admin view; network/KV failures
-// fall back to a local-only reset. Never throws.
-export async function resetGlobalStats(password?: string): Promise<VisitStats> {
-  try {
-    if (!isOffline()) {
-      await fetchJson(GLOBAL_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reset', password }),
-      });
-    }
-  } catch (err) {
-    // Wrong password: keep the local cache so the UI still shows the
-    // server state on next load instead of a misleading zero.
-    if (
-      typeof err === 'object' &&
-      err !== null &&
-      'status' in err &&
-      (err as { status: unknown }).status === 403
-    ) {
-      return getStats();
-    }
-    // Fall through to local reset — global reset failed, still clear cache.
-  }
+// Global reset is dashboard-only on purpose: there is no public reset
+// endpoint, so this only clears the local cache. Never throws.
+export async function resetGlobalStats(): Promise<VisitStats> {
   return resetStats();
 }
